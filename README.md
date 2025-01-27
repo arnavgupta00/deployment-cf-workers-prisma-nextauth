@@ -1,37 +1,195 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Next.js Application on Cloudflare Workers with Prisma Accelerate and NextAuth.js
+
+This repository contains a Next.js application configured for deployment on Cloudflare Workers. It integrates Prisma Accelerate for efficient database interactions and NextAuth.js for authentication, utilizing the Web Crypto API to ensure compatibility with the Cloudflare Workers environment.
+
+## Table of Contents
+
+- [Features](#features)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Configuration](#configuration)
+  - [Running the Application](#running-the-application)
+- [Deployment](#deployment)
+- [Technologies Used](#technologies-used)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Features
+
+- **Next.js Framework**: Utilizes Next.js for server-side rendering and static site generation.
+- **Cloudflare Workers Deployment**: Deployed on Cloudflare Workers for edge computing benefits.
+- **Prisma Accelerate**: Implements Prisma Accelerate for optimized database performance.
+- **NextAuth.js**: Provides authentication mechanisms, adapted to use the Web Crypto API for compatibility with Cloudflare Workers.
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+Ensure you have the following installed:
+
+- [Node.js](https://nodejs.org/) (version 18 or higher)
+- [npm](https://www.npmjs.com/) or [Yarn](https://yarnpkg.com/)
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) for Cloudflare Workers deployment
+- Access to a PostgreSQL database
+
+### Installation
+
+1. **Clone the Repository**:
+
+   ```bash
+   git clone https://github.com/arnavgupta00/deployment-example-cloudflare-workers-prisma-nextAuth
+   cd deployment-example-cloudflare-workers-prisma-nextAuth
+   ```
+
+2. **Install Dependencies**:
+
+   Using npm:
+
+   ```bash
+   npm install
+   ```
+
+   Or using Yarn:
+
+   ```bash
+   yarn install
+   ```
+
+### Configuration
+
+1. **Environment Variables**:
+
+   Create a `.env` file in the root directory and add the following variables:
+
+   ```env
+   DATABASE_URL="your-prisma-accelerate-database-connection-string"
+   NEXTAUTH_SECRET="your-nextauth-secret"
+   NEXTAUTH_URL="your-website-link"
+   ```
+
+   - `DATABASE_URL`: Your Prisma Accelerate connection string.
+   - `NEXTAUTH_SECRET`: A secret key for NextAuth.js.
+   - `NEXTAUTH_URL`: Your Website Link.
+
+2. **Prisma Configuration**:
+
+   Ensure your `prisma/schema.prisma` file is configured with the appropriate datasource:
+
+   ```prisma
+   datasource db {
+     provider = "postgresql"
+     url      = env("DATABASE_URL")
+   }
+
+   generator client {
+     provider        = "prisma-client-js"
+   
+   }
+
+   // Define your data models here
+   ```
+
+   Generate the Prisma client:
+
+   ```bash
+   npx prisma generate
+   ```
+
+3. **NextAuth.js Configuration**:
+
+   Configure NextAuth.js to use the Web Crypto API for JWT encoding and decoding to ensure compatibility with Cloudflare Workers. In your NextAuth.js configuration file:
+
+   ```javascript
+   import NextAuth from "next-auth";
+   import CredentialsProvider from "next-auth/providers/credentials";
+   import { encode, decode } from "@/lib/webcrypto"; // Custom encode/decode functions
+   import prisma from "@/lib/db";
+
+   export default NextAuth({
+     providers: [
+       CredentialsProvider({
+         name: "Credentials",
+         credentials: {
+           username: { label: "Email", type: "text" },
+           password: { label: "Password", type: "password" },
+         },
+         async authorize(credentials) {
+           if (!credentials) return null;
+
+           const user = await prisma.user.findUnique({
+             where: { email: credentials.username },
+           });
+
+           if (user && user.password === credentials.password) {
+             return { id: user.id.toString(), name: user.name, email: user.email };
+           }
+
+           return null;
+         },
+       }),
+     ],
+     secret: process.env.NEXTAUTH_SECRET,
+     session: {
+       strategy: "jwt",
+     },
+     jwt: {
+       encode,
+       decode,
+     },
+   });
+   ```
+
+   The `encode` and `decode` functions in `@/lib/webcrypto` should utilize the Web Crypto API to handle JWT operations, ensuring compatibility with the Cloudflare Workers environment.
+
+### Running the Application
+
+To run the application locally:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Or with Yarn:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+yarn dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Access the application at `http://localhost:3000`.
 
-## Learn More
+## Deployment
 
-To learn more about Next.js, take a look at the following resources:
+To deploy the application to Cloudflare Workers:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **Authenticate with Cloudflare**:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   ```bash
+   wrangler login
+   ```
 
-## Deploy on Vercel
+2. **Configure Wrangler**:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   Refer `example.wrangler.json`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# deployment-example-cloudflare-workers-prisma-nextAuth
+3. **Publish the Application**:
+
+   ```bash
+   wrangler publish
+   ```
+
+## Technologies Used
+
+- [Next.js](https://nextjs.org/)
+- [Cloudflare Workers](https://workers.cloudflare.com/)
+- [Prisma Accelerate](https://www.prisma.io/docs/concepts/components/prisma-accelerate)
+- [NextAuth.js](https://next-auth.js.org/)
+- [Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request for any improvements or bug fixes.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
