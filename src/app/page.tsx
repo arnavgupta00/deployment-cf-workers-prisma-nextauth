@@ -13,7 +13,7 @@ export default async function Home() {
       {session ? (
         <div>
           <h1 className="text-2xl font-bold">
-            Welcome, {session.user?.name || "User"}!
+            Welcome, {session.user?.name || "User"}!!
           </h1>
           <p>Email: {session.user?.email}</p>
           <SignOutButton />

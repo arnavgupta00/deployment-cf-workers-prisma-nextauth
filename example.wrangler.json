@@ -19,7 +19,7 @@
   "vars": {
     "DATABASE_URL": "prisma://accelerate.prisma-data.net/?api_key=*****",
     "NEXTAUTH_URL": "https://my-next-app.adv-dep-test.workers.dev",
-    "NEXTAUTH_SECRET": "hehehehehhehe"
+    "NEXTAUTH_SECRET": "your next-auth secret"
   }
   /**
    * Smart Placement
